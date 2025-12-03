@@ -10,44 +10,31 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const ASSISTANT_ID = process.env.ASSISTANT_ID;
+app.get("/", (req, res) => {
+  res.send("Romayos AI backend is running.");
+});
 
-app.post("/api/chat", async (req, res) => {
+app.post("/chat", async (req, res) => {
   try {
-    const userMessage = req.body.message;
+    const { message } = req.body;
 
-    // Create a thread
-    const thread = await client.beta.threads.create();
-
-    // Add user message
-    await client.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: userMessage
+    const response = await client.responses.create({
+      model: process.env.ASSISTANT_MODEL || "gpt-4.1",
+      input: message,
+      attachments: [{
+        file_id: process.env.VECTOR_ID,
+        tools: [{ type: "file_search" }]
+      }],
+      metadata: { assistant_id: process.env.ASSISTANT_ID }
     });
 
-    // Run the assistant
-    const run = await client.beta.threads.runs.create(thread.id, {
-      assistant_id: ASSISTANT_ID
-    });
-
-    // Wait for the run to finish
-    let runStatus;
-    do {
-      await new Promise(r => setTimeout(r, 500));
-      runStatus = await client.beta.threads.runs.retrieve(thread.id, run.id);
-    } while (runStatus.status !== "completed");
-
-    // Fetch messages
-    const messages = await client.beta.threads.messages.list(thread.id);
-
-    const lastMessage = messages.data[0].content[0].text.value;
-
-    res.send({ reply: lastMessage });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: err.message });
+    res.json({ reply: response.output_text });
+  } catch (error) {
+    console.error("Backend Error:", error);
+    res.status(500).json({ error: "AI request failed" });
   }
 });
 
-app.listen(3000, () => console.log("Romayos AI backend running"));
+const port = process.env.PORT || 10000;
+app.listen(port, () => console.log(`Romayos AI backend running on port ${port}`));
+
