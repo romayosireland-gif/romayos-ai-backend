@@ -14,23 +14,35 @@ app.get("/", (req, res) => {
   res.send("Romayos AI backend is running.");
 });
 
+// ⭐ FIXED: REAL ASSISTANT CALL
 app.post("/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const userMessage = req.body.message;
+    const assistantId = process.env.ASSISTANT_ID;
 
-    const response = await client.responses.create({
-      model: "gpt-4.1",
-      input: message,
-      file_search: {
-        vector_store_ids: [process.env.VECTOR_ID]   // ✔ correct vector store usage
-      }
+    // 1. Create a thread
+    const thread = await client.beta.threads.create();
+
+    // 2. Add message to the thread
+    await client.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: userMessage
     });
 
-    res.json({ reply: response.output_text });
+    // 3. Run assistant
+    const run = await client.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistantId
+    });
 
-  } catch (error) {
-    console.error("BACKEND ERROR:", error.response?.data || error.message);
-    res.status(500).json({ error: "AI request failed" });
+    // 4. Extract response
+    const messages = await client.beta.threads.messages.list(thread.id);
+    const reply = messages.data[0].content[0].text.value;
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("BACKEND ERROR:", err);
+    res.status(500).json({ error: "AI backend failed" });
   }
 });
 
