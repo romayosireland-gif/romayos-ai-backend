@@ -19,22 +19,25 @@ app.post("/chat", async (req, res) => {
     const { message } = req.body;
 
     const response = await client.responses.create({
-      model: process.env.ASSISTANT_MODEL || "gpt-4.1",
+      model: "gpt-4.1",
       input: message,
+      reasoning: { effort: "medium" },
+
+      // FILE SEARCH WITH VECTOR STORE
       attachments: [
         {
-          vector_store_id: process.env.VECTOR_ID
+          vector_store_id: process.env.VECTOR_ID,
+          tools: [{ type: "file_search" }]
         }
-      ],
-      metadata: {
-        assistant_id: process.env.ASSISTANT_ID
-      }
+      ]
     });
 
-    res.json({ reply: response.output_text });
+    const reply = response.output_text || "No response received.";
+
+    res.json({ reply });
 
   } catch (error) {
-    console.error("Backend Error:", error);
+    console.error("Backend Error:", error.response?.data || error);
     res.status(500).json({ error: "AI request failed" });
   }
 });
