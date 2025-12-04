@@ -21,14 +21,18 @@ app.post("/chat", async (req, res) => {
     const response = await client.responses.create({
       model: process.env.ASSISTANT_MODEL || "gpt-4.1",
       input: message,
-      attachments: [{
-        file_id: process.env.VECTOR_ID,
-        tools: [{ type: "file_search" }]
-      }],
-      metadata: { assistant_id: process.env.ASSISTANT_ID }
+      attachments: [
+        {
+          vector_store_id: process.env.VECTOR_ID
+        }
+      ],
+      metadata: {
+        assistant_id: process.env.ASSISTANT_ID
+      }
     });
 
     res.json({ reply: response.output_text });
+
   } catch (error) {
     console.error("Backend Error:", error);
     res.status(500).json({ error: "AI request failed" });
@@ -36,5 +40,8 @@ app.post("/chat", async (req, res) => {
 });
 
 const port = process.env.PORT || 10000;
-app.listen(port, () => console.log(`Romayos AI backend running on port ${port}`));
+app.listen(port, () =>
+  console.log(`Romayos AI backend running on port ${port}`)
+);
+
 
