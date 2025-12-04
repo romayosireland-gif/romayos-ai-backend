@@ -21,30 +21,20 @@ app.post("/chat", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-4.1",
       input: message,
-      reasoning: { effort: "medium" },
-
-      // FILE SEARCH WITH VECTOR STORE
-      attachments: [
-        {
-          vector_store_id: process.env.VECTOR_ID,
-          tools: [{ type: "file_search" }]
-        }
-      ]
+      file_search: {
+        vector_store_ids: [process.env.VECTOR_ID]   // ✔ correct vector store usage
+      }
     });
 
-    const reply = response.output_text || "No response received.";
-
-    res.json({ reply });
+    res.json({ reply: response.output_text });
 
   } catch (error) {
-    console.error("Backend Error:", error.response?.data || error);
+    console.error("BACKEND ERROR:", error.response?.data || error.message);
     res.status(500).json({ error: "AI request failed" });
   }
 });
 
 const port = process.env.PORT || 10000;
-app.listen(port, () =>
-  console.log(`Romayos AI backend running on port ${port}`)
-);
+app.listen(port, () => console.log(`Romayos AI backend running on port ${port}`));
 
 
